@@ -1,17 +1,15 @@
 #include <vector>
-#include "models.h"
 #include "samples.h"
 #include "checker.h"
+#include <iostream>
+#include "trace_reader.h"
 
 int main(){
-    std::vector<InputSample> sample {
-    {1, 0, 0, 0, 0},
-    {0, 1, 1, 2, 1},
-    {0, 1, 4, 5, 1},
-    {1, 0, 0, 0, 0},
-    {0, 1, 1, 3, 1},
-    {0, 1, 2, 2, 1}
-    };
-    model_comparison(sample);
+    try {
+        model_comparison(read_input_trace("input.txt"));
+    }
+    catch(const std::exception& e) {
+        std::cerr << e.what() << '\n';
+    }
     return 0;
 }
