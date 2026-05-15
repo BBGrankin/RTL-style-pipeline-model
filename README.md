@@ -1,8 +1,8 @@
 # RTL-style Pipeline Model
 
-Учебный C++ проект для моделирования простой RTL-style pipeline-модели и проверки поведения после добавления задержки на один такт.
+Учебный C++ проект для моделирования RTL-style pipeline-поведения и проверки результатов после добавления pipeline latency.
 
-Проект имитирует базовую verification-задачу: есть комбинационная модель без задержки и pipeline-модель с задержкой. Программа сравнивает их выходы с учётом latency, `valid`, `reset` и выводит mismatch diagnostics при расхождении.
+Проект имитирует базовую verification-задачу: есть комбинационная модель без задержки и pipeline-модели с задержкой. Программа читает входной trace из файла, прогоняет его через модели, сравнивает expected/actual outputs с учётом latency, `valid`, `reset` и выводит mismatch diagnostics при расхождении.
 
 ---
 
@@ -14,21 +14,28 @@
 y = (a + b) * c
 ```
 
-В проекте есть две модели:
+В проекте есть несколько моделей:
 
-- `CombinationModel` — комбинационная модель, выдаёт результат на том же такте;
-- `PipelinedModel` — pipeline-модель, выдаёт результат на следующем такте.
+- `CombinationModel` — комбинационная модель без задержки;
+- `PipelinedModel` — pipeline-модель с задержкой `latency = 1`;
+- `TwoStagePipelineModel` — двухстадийная pipeline-модель с задержкой `latency = 2`.
 
-Сравнение выполняется с учётом задержки:
+Для `latency = 1` сравнение выполняется так:
 
 ```text
 comb_outputs[i] сравнивается с pipe_outputs[i + 1]
 ```
 
-То есть:
+Для `latency = 2`:
 
 ```text
-input на cycle N -> output pipeline на cycle N + 1
+comb_outputs[i] сравнивается с pipe_outputs[i + 2]
+```
+
+То есть общий принцип:
+
+```text
+input на cycle N -> output pipeline на cycle N + latency
 ```
 
 ---
@@ -55,6 +62,8 @@ valid = 0
 y = 0
 ```
 
+Если `valid = 0`, это не reset. Такой такт добавляет bubble в pipeline, но не очищает уже находящиеся внутри данные.
+
 ---
 
 ## Что делает программа
@@ -63,14 +72,15 @@ y = 0
 
 1. читает входной trace из файла;
 2. валидирует формат входных данных;
-3. прогоняет данные через `CombinationModel`;
-4. прогоняет данные через `PipelinedModel`;
-5. добавляет flush-такт для pipeline;
-6. печатает таблицу по всем cycle;
-7. сравнивает выходы моделей с учётом задержки `latency = 1`;
-8. учитывает `reset` на output-cycle;
-9. выводит `Check: OK` или `Check: FAILED`;
-10. при ошибке выводит mismatch report.
+3. выбирает режим проверки по latency;
+4. прогоняет данные через `CombinationModel`;
+5. прогоняет данные через выбранную pipeline-модель;
+6. добавляет нужное количество flush-тактов;
+7. печатает таблицу по всем cycle;
+8. сравнивает выходы моделей с учётом latency;
+9. учитывает `reset` на пути от input-cycle до output-cycle;
+10. выводит `Check: OK` или `Check: FAILED`;
+11. при ошибке выводит mismatch report.
 
 ---
 
@@ -145,7 +155,8 @@ Reason: ...
 - на каком pipe-cycle ожидался результат;
 - какой результат ожидался;
 - какой результат был получен;
-- повлиял ли `reset` на output-cycle.
+- повлиял ли `reset` на путь прохождения данных по pipeline;
+- какая latency использовалась при сравнении.
 
 ---
 
@@ -154,19 +165,22 @@ Reason: ...
 ```text
 RTL-style-pipeline-model/
 ├── include/
+│   ├── app_runner.h
 │   ├── checker.h
 │   ├── errors.h
+│   ├── formatting.h
 │   ├── models.h
 │   ├── samples.h
 │   └── trace_reader.h
 ├── src/
+│   ├── app_runner.cpp
 │   ├── checker.cpp
 │   ├── errors.cpp
 │   ├── models.cpp
-│   ├── samples.cpp
 │   └── trace_reader.cpp
 ├── tests/
 │   ├── valid_trace.txt
+│   ├── latency_2.txt
 │   ├── bad_reset.txt
 │   ├── bad_valid.txt
 │   ├── bad_format_short.txt
@@ -212,24 +226,34 @@ app
 make run
 ```
 
-По умолчанию используется файл:
+По умолчанию используется:
 
 ```text
-input.txt
+FILE=input.txt
+LATENCY=1
 ```
 
-### Запуск с произвольным trace-файлом
+### Запуск с произвольным trace-файлом и latency
 
 ```bash
-make run FILE=tests/valid_trace.txt
+make run FILE=tests/valid_trace.txt LATENCY=1
 ```
-
-Примеры:
 
 ```bash
-make run FILE=tests/bad_reset.txt
-make run FILE=tests/not_a_number.txt
+make run FILE=tests/latency_2.txt LATENCY=2
 ```
+
+Также можно запускать программу напрямую:
+
+```bash
+./app tests/valid_trace.txt 1
+```
+
+```bash
+./app tests/latency_2.txt 2
+```
+
+Если файл не передан, используется `input.txt`.
 
 ---
 
@@ -237,7 +261,7 @@ make run FILE=tests/not_a_number.txt
 
 В проекте есть набор входных trace-файлов в папке `tests/`.
 
-### Основной корректный тест
+### Основной корректный тест для latency = 1
 
 ```bash
 make test
@@ -247,6 +271,18 @@ make test
 
 ```bash
 make test_valid
+```
+
+Ожидаемый результат:
+
+```text
+Check: OK
+```
+
+### Корректный тест для latency = 2
+
+```bash
+make test_latency_2
 ```
 
 Ожидаемый результат:
@@ -333,6 +369,8 @@ app
 - классы;
 - инкапсуляция;
 - разбиение на `.h` и `.cpp`;
+- header-only файл для простых структур;
+- отдельный модуль запуска `app_runner`;
 - сборка через `Makefile`.
 
 ---
@@ -341,13 +379,15 @@ app
 
 Проект не является полноценной RTL-моделью и не использует Verilog/SystemVerilog.
 
-Его цель — на C++ понять базовые идеи, важные при работе с RTL-моделями и retiming:
+Его цель — на C++ понять базовые идеи, важные при работе с RTL-моделями, retiming и verification:
 
 - регистр хранит состояние между тактами;
 - pipeline добавляет задержку;
 - `valid` нужен для отличия настоящих данных от пустых;
+- `valid = 0` создаёт bubble, но не очищает весь pipeline;
 - `reset` может очистить pipeline и удалить отложенный результат;
 - модели нельзя всегда сравнивать на одном и том же cycle;
+- latency должна учитываться при сравнении expected/actual;
 - при проверке важно выводить не только `FAILED`, но и подробную диагностику ошибки.
 
 ---
@@ -358,21 +398,25 @@ app
 
 - комбинационная модель;
 - pipeline-модель с задержкой 1 такт;
+- двухстадийная pipeline-модель с задержкой 2 такта;
 - обработка `valid`;
 - обработка `reset`;
-- flush-такт;
+- flush-такты в зависимости от latency;
 - сравнение моделей с учётом latency;
 - reset-aware expected output;
 - mismatch diagnostics;
 - чтение input trace из файла;
 - валидация входных данных;
+- выбор latency через аргументы командной строки;
 - набор тестовых trace-файлов;
+- отдельные make-цели для тестов;
 - сборка и запуск через `Makefile`.
 
 Планируемые улучшения:
 
+- строгий парсинг чисел вместо `std::stoi`;
 - автоматическая проверка ожидаемых сообщений об ошибках;
 - поддержка комментариев в input trace;
-- multi-stage pipeline;
+- обобщение pipeline-модели для произвольной latency;
 - более аккуратное форматирование таблицы вывода;
 - дополнительные сценарии для retiming.

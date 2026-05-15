@@ -1,23 +1,15 @@
-#include <vector>
-#include "samples.h"
-#include "checker.h"
 #include <iostream>
-#include "trace_reader.h"
+#include "app_runner.h"
+#include "formatting.h"
 
 int main(int argc, char **argv){
+    std::cout << '\n' << line << line;
     try {
-        if (argc == 1){
-            model_comparison(read_input_trace("input.txt"));
-        }
-        else if (argc == 2){
-            model_comparison(read_input_trace(argv[1]));
-        }
-        else {
-            throw "\nWrong number of files\n";
-        }
+        run_comparison(argc, argv);
     }
     catch(const std::exception& e) {
         std::cerr << e.what() << '\n';
     }
+    std::cout << line << line << '\n';
     return 0;
 }

@@ -1,6 +1,7 @@
 #include "errors.h"
 #include <iostream>
 #include "samples.h"
+#include "formatting.h"
 
 std::size_t ErrorsLog::size() const{
     return errors.size();
@@ -27,8 +28,8 @@ void ErrorsLog::print_all() const {
             << line << '\n';
         else
             std::cout << "\nReason: pipeline output differs "
-                            "from combinational output with latency 1\n"
-            << line << '\n';
+                            "from combinational output with latency "
+            << latency << '\n' << line << '\n';
     }
 }
 
@@ -49,6 +50,6 @@ void ErrorsLog::print_first() const{
         << line << '\n';
     else
         std::cout << "\nReason: pipeline output differs "
-                        "from combinational output with latency 1\n"
-        << line << '\n';     
+                        "from combinational output with latency "
+        << latency << '\n' << line << '\n';     
 }

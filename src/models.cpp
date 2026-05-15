@@ -23,7 +23,6 @@ OutputSample PipelinedModel::tick (int reset, int valid, int a, int b, int c){
     return output;
 }
 
-
 OutputSample CombinationModel::tick(int reset, int valid, int a, int b, int c){
     OutputSample output;
     if (reset == 1){
@@ -38,6 +37,55 @@ OutputSample CombinationModel::tick(int reset, int valid, int a, int b, int c){
     else{
         output.valid = valid;
         output.y = (a + b) * c;
+    }
+    return output;
+}
+
+
+TwoStagePipelineModel::TwoStagePipelineModel(int stage1_sum, int stage1_c, 
+                                             int stage1_valid, int stage2_sum,
+                                             int stage2_c, int stage2_valid):
+    stage1_sum(stage1_sum), stage1_c(stage1_c), stage1_valid(stage1_valid),
+    stage2_sum(stage2_sum), stage2_c(stage2_c), stage2_valid(stage2_valid)
+{}
+
+OutputSample TwoStagePipelineModel::tick(int reset, int valid, 
+                                         int a, int b, int c){
+    OutputSample output {};
+    if (reset == 1){
+        stage1_c = 0;
+        stage1_sum = 0;
+        stage1_valid = 0;
+
+        stage2_c = 0;
+        stage2_sum = 0;
+        stage2_valid = 0;
+
+        output.valid = 0;
+        output.y = 0;
+        return output;
+    }
+
+    output.valid = stage2_valid;
+    if (stage2_valid == 0){
+        output.y = 0;
+    }
+    else {
+        output.y = stage2_c * stage2_sum;
+    }
+    stage2_valid = stage1_valid;
+    stage2_c = stage1_c;
+    stage2_sum = stage1_sum;
+
+    if (valid == 0){
+        stage1_c = 0;
+        stage1_sum = 0;
+        stage1_valid = 0;
+    }
+    else {
+        stage1_c = c;
+        stage1_sum = a + b;
+        stage1_valid = valid;
     }
     return output;
 }

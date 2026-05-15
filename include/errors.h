@@ -15,7 +15,14 @@ struct Error{
 class ErrorsLog{
     private:
         std::vector<Error> errors;
+        std::size_t latency;
+
     public:
+
+        void setLatency(std::size_t latency){
+            this->latency = latency;
+        }
+
         std::size_t size() const;
 
         void push_back(const Error &error);
