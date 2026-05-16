@@ -5,7 +5,8 @@ SOURCES = main.cpp src/checker.cpp\
 				   src/models.cpp\
 				   src/trace_reader.cpp\
 				   src/app_runner.cpp\
-				   src/formatting.cpp
+				   src/formatting.cpp\
+				   src/output_reader.cpp
 
 CXXFLAGS = -std=c++20 -Wall -Wextra -Iinclude
 
@@ -17,9 +18,11 @@ EMPTY = tests/empty.txt
 NAN = tests/not_a_number.txt
 VALID = tests/valid_trace.txt
 LATENCY_2 = tests/latency_2.txt
+OUTPUT = actual_output.txt
 
-FILE ?= input.txt
+INPUT_FILE ?= input.txt
 LATENCY ?= 1
+OUTPUT_FILE ?= actual_output.txt
 
 .PHONY: all\
 		test\
@@ -42,7 +45,7 @@ $(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) $(SOURCES) -o $(TARGET)
 
 run: $(TARGET)
-	./$(TARGET) $(FILE) $(LATENCY)
+	./$(TARGET) $(INPUT_FILE) $(OUTPUT_FILE) $(LATENCY)
 
 test_default: $(TARGET)
 	./$(TARGET)
@@ -51,7 +54,7 @@ test: $(TARGET)
 	./$(TARGET) $(VALID) 1
 
 test_valid: $(TARGET)
-	./$(TARGET) $(VALID) 1
+	./$(TARGET) $(VALID) 1 
 
 test_bad_long: $(TARGET)
 	./$(TARGET) $(LONG) 1
@@ -72,17 +75,17 @@ test_nan: $(TARGET)
 	./$(TARGET) $(NAN) 1
 
 test_latency_2: $(TARGET)
-	./$(TARGET) $(LATENCY_2) 2
+	./$(TARGET) $(LATENCY_2) 2 
 
 test_all: $(TARGET)
-	./$(TARGET) $(VALID) 1
+	./$(TARGET) $(VALID) 1 
 	./$(TARGET) $(LATENCY_2) 2
-	./$(TARGET) $(BAD_RESET) 1
-	./$(TARGET) $(BAD_VALID) 1
-	./$(TARGET) $(SHORT) 1
-	./$(TARGET) $(LONG) 1
-	./$(TARGET) $(NAN) 1
-	./$(TARGET) $(EMPTY) 1
+	./$(TARGET) $(BAD_RESET) 1 
+	./$(TARGET) $(BAD_VALID) 1 
+	./$(TARGET) $(SHORT) 1 
+	./$(TARGET) $(LONG) 1 
+	./$(TARGET) $(NAN) 1 
+	./$(TARGET) $(EMPTY) 1 
 
 clean:
 	rm -f ./$(TARGET)

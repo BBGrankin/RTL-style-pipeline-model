@@ -23,7 +23,7 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
     std::string line {};
     std::string message {};
     if (!file){
-        throw std::invalid_argument("\nCouldnt`t read file\n");
+        throw std::invalid_argument("\nCouldnt`t read input file\n");
     }
     while (std::getline(file, line)){
         ++line_count;
@@ -35,13 +35,13 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
             container.push_back(word);
         }
         if (container.size() != 5){
-            message = "\nWrong number of parameters"
-                        " in line " + std::to_string(line_count) + '\n';
+            message = "\nWrong number of parameters in intput file"
+                        " on line " + std::to_string(line_count) + '\n';
             throw std::invalid_argument(message);
         }
         for (std::size_t i {}; i < container.size(); ++i){
             if (!is_token_number(container[i])){ 
-                message = "\nNot a number in line " 
+                message = "\nNot a number in input file on line " 
                           + std::to_string(line_count) + " on position " 
                           + std::to_string(i + 1) + '\n';
                 throw std::invalid_argument(message);
@@ -56,7 +56,7 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
         }
         catch(const std::exception&) {
             throw std::invalid_argument("\nCouldn`t convert string to int "
-                                        "on line " + 
+                                        "in input file on line " + 
                                         std::to_string(line_count) + 
                                         " on position " + 
                                         std::to_string(position + 1) + '\n');
@@ -68,13 +68,13 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
         sample.c = values[4];
         if (sample.reset > 1 || sample.reset < 0
             || sample.valid < 0 || sample.valid > 1){
-            message = "\nWrong valid / reset argument in line " 
+            message = "\nWrong valid / reset argument in input file on line " 
                       + std::to_string(line_count) + '\n';
             throw std::invalid_argument(message);
         }
         samples.push_back(sample);
     }
     if (samples.size() == 0)
-        throw std::invalid_argument("\nFile is empty\n");
+        throw std::invalid_argument("\nInput file is empty\n");
     return samples;
 }
