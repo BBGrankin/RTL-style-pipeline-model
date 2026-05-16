@@ -1,8 +1,8 @@
 # RTL-style Pipeline Model
 
-Учебный C++ проект для моделирования RTL-style pipeline-поведения и проверки результатов после добавления pipeline latency.
+Учебный C++ проект для моделирования RTL-style pipeline-поведения и проверки результатов с учётом pipeline latency.
 
-Проект имитирует базовую verification-задачу: есть комбинационная модель без задержки и pipeline-модели с задержкой. Программа читает входной trace из файла, прогоняет его через модели, сравнивает expected/actual outputs с учётом latency, `valid`, `reset` и выводит mismatch diagnostics при расхождении.
+Проект имитирует базовую verification-задачу: есть комбинационная модель без задержки и pipeline-модели с задержкой. Программа читает входной trace из файла, валидирует данные, прогоняет их через модели, сравнивает expected/actual outputs с учётом `latency`, `valid`, `reset` и выводит mismatch diagnostics при расхождении.
 
 ---
 
@@ -32,7 +32,7 @@ comb_outputs[i] сравнивается с pipe_outputs[i + 1]
 comb_outputs[i] сравнивается с pipe_outputs[i + 2]
 ```
 
-То есть общий принцип:
+Общий принцип:
 
 ```text
 input на cycle N -> output pipeline на cycle N + latency
@@ -115,7 +115,9 @@ reset valid a b c
 
 - файл должен открываться;
 - строка должна содержать ровно 5 параметров;
-- все параметры должны быть числами;
+- все параметры должны быть корректными целыми числами;
+- токены вроде `12abc`, `abc12`, `1.5`, `+`, `-` считаются ошибкой;
+- числа должны помещаться в тип `int`;
 - `reset` должен быть равен `0` или `1`;
 - `valid` должен быть равен `0` или `1`;
 - файл не должен быть пустым.
@@ -124,10 +126,11 @@ reset valid a b c
 
 ```text
 Wrong number of parameters in line N
-Not a number in line N
+Not a number in line N on position K
+Could not convert string to int on line N on position K
 Wrong valid / reset argument in line N
 File is empty
-Couldn`t read file
+Could not read file
 ```
 
 ---
@@ -157,6 +160,13 @@ Reason: ...
 - какой результат был получен;
 - повлиял ли `reset` на путь прохождения данных по pipeline;
 - какая latency использовалась при сравнении.
+
+Если reset произошёл на пути от input-cycle до output-cycle, ожидаемый pipeline output становится невалидным:
+
+```text
+expected valid = 0
+expected y = 0
+```
 
 ---
 
@@ -339,6 +349,12 @@ make test_empty
 
 Ожидаемый результат: ошибка, так как файл не содержит входных samples.
 
+### Запуск всех тестовых сценариев
+
+```bash
+make test_all
+```
+
 ---
 
 ## Очистка
@@ -364,6 +380,8 @@ app
 - `std::string_view`;
 - `std::ifstream`;
 - `std::istringstream`;
+- `std::format`;
+- `std::stoi`;
 - исключения;
 - структуры;
 - классы;
@@ -388,6 +406,7 @@ app
 - `reset` может очистить pipeline и удалить отложенный результат;
 - модели нельзя всегда сравнивать на одном и том же cycle;
 - latency должна учитываться при сравнении expected/actual;
+- reset должен учитываться на пути от input-cycle до output-cycle;
 - при проверке важно выводить не только `FAILED`, но и подробную диагностику ошибки.
 
 ---
@@ -406,17 +425,17 @@ app
 - reset-aware expected output;
 - mismatch diagnostics;
 - чтение input trace из файла;
-- валидация входных данных;
+- строгая валидация входных данных;
 - выбор latency через аргументы командной строки;
 - набор тестовых trace-файлов;
 - отдельные make-цели для тестов;
+- аккуратное табличное форматирование вывода;
 - сборка и запуск через `Makefile`.
 
 Планируемые улучшения:
 
-- строгий парсинг чисел вместо `std::stoi`;
-- автоматическая проверка ожидаемых сообщений об ошибках;
+- автоматическая проверка ожидаемых сообщений об ошибках и exit codes;
 - поддержка комментариев в input trace;
 - обобщение pipeline-модели для произвольной latency;
-- более аккуратное форматирование таблицы вывода;
+- добавление внешнего `actual_output.txt` и сравнение reference output с external output;
 - дополнительные сценарии для retiming.
