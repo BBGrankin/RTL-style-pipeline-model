@@ -4,7 +4,8 @@ SOURCES = main.cpp src/checker.cpp\
 				   src/errors.cpp\
 				   src/models.cpp\
 				   src/trace_reader.cpp\
-				   src/app_runner.cpp
+				   src/app_runner.cpp\
+				   src/formatting.cpp
 
 CXXFLAGS = -std=c++20 -Wall -Wextra -Iinclude
 

@@ -2,36 +2,53 @@
 #include "models.h"
 #include <iostream>
 #include "formatting.h"
+#include <format>
+#include <iomanip>
 
 void print_both_models(const std::vector<OutputSample> &comb, 
                        const std::vector<OutputSample> &pipe, 
                        const std::vector<InputSample> &sample,
                        std::size_t latency){
-    std::cout << "\ncycle  " << separator << "reset"
-    << separator << "valid" << separator << 'a'
-    << separator << 'b' << separator << 'c' << separator
-    << "comb_valid" << separator << "comb_y" << separator
-    << "pipe_valid" << separator << "pipe_y" << separator
-    << '\n' << line;
+    std::cout << '\n' << line() << std::format("{:^{}}", "cycle", width) << '|'
+    << std::format("{:^{}}", "reset", width) << '|'
+    << std::format("{:^{}}", "valid", width) << '|'
+    << std::format("{:^{}}", 'a', width) << '|'
+    << std::format("{:^{}}", 'b', width) << '|'
+    << std::format("{:^{}}", 'c', width) << '|'
+    << std::format("{:^{}}", "comb_valid", width) << '|'
+    << std::format("{:^{}}", "comb_y", width) << '|'
+    << std::format("{:^{}}", "pipe_valid", width) << '|'
+    << std::format("{:^{}}", "pipe_y", width) << '|'
+    << '\n' << line();
     for (std::size_t i {}; i < comb.size(); ++i){
-        std::cout << "cycle " << i << separator << "  " << sample[i].reset
-        << "  " << separator << "  " << sample[i].valid
-        << "  " << separator << sample[i].a << separator
-        << sample[i].b << separator << sample[i].c 
-        << separator << "    " << comb[i].valid << "     "
-        << separator << "  " << comb[i].y << "   "
-        << separator << "    " << pipe[i].valid << "     " 
-        << separator << "  " << pipe[i].y << "   " 
-        << separator << '\n' << line;
+        std::string cycle {"cycle "};
+        cycle += std::to_string(i);
+        std::cout << std::format("{:^{}}", cycle, width) << '|'
+        << std::format("{:^{}}", sample[i].reset, width) << '|'
+        << std::format("{:^{}}", sample[i].valid, width) << '|'
+        << std::format("{:^{}}", sample[i].a, width) << '|'
+        << std::format("{:^{}}", sample[i].b, width) << '|'
+        << std::format("{:^{}}", sample[i].c, width) << '|'
+        << std::format("{:^{}}", comb[i].valid, width) << '|'
+        << std::format("{:^{}}", comb[i].y, width) << '|'
+        << std::format("{:^{}}", pipe[i].valid, width) << '|'
+        << std::format("{:^{}}", pipe[i].y, width) << '|'
+        << '\n' << line();
     }
     for (std::size_t i {latency}; i > 0; --i){
-        std::cout << "cycle " << pipe.size() - i << separator << "  0  " 
-        << separator << "  0  " << separator << 0 
-        << separator << 0 << separator << 0
-        << separator << "    0     " << separator 
-        << "  0   " << separator << "    " << pipe[pipe.size() - i].valid
-        << "     " << separator << "  " 
-        << pipe[pipe.size() - i].y << "   " << separator << '\n' << line;
+        std::string cycle {"cycle "};
+        cycle += std::to_string(pipe.size() - i);
+        std::cout << std::format("{:^{}}", cycle, width) << '|' 
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", 0, width) << '|'
+        << std::format("{:^{}}", pipe[pipe.size() - i].valid, width) << '|'
+        << std::format("{:^{}}", pipe[pipe.size() - i].y, width) << '|'
+        << '\n' << line();
     }
 }
 

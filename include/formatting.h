@@ -1,8 +1,9 @@
 #pragma once
 
-#include <string_view>
+#include <string>
 
-inline constexpr std::string_view separator {"  |  "};
+const int width {12};
 
-inline constexpr std::string_view line {"------------------------------------------------------"
-    "----------------------------------------------\n"};
+const int columns_amount {10};
+
+std::string line ();

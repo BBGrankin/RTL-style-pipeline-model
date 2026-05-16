@@ -47,11 +47,11 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
                 throw std::invalid_argument(message);
             }
         }
+        std::vector<int> values {};
         std::size_t position {};
         try {
             for (; position < container.size(); ++position){
-                std::stoi(container[position]);
-                
+                values.push_back(std::stoi(container[position]));
             }
         }
         catch(const std::exception&) {
@@ -61,11 +61,11 @@ std::vector<InputSample> read_input_trace (const std::string& file_name){
                                         " on position " + 
                                         std::to_string(position + 1) + '\n');
         }
-        sample.reset = std::stoi(container[0]);
-        sample.valid = std::stoi(container[1]);
-        sample.a = std::stoi(container[2]);
-        sample.b = std::stoi(container[3]);
-        sample.c = std::stoi(container[4]);
+        sample.reset = values[0];
+        sample.valid = values[1];
+        sample.a = values[2];
+        sample.b = values[3];
+        sample.c = values[4];
         if (sample.reset > 1 || sample.reset < 0
             || sample.valid < 0 || sample.valid > 1){
             message = "\nWrong valid / reset argument in line " 
