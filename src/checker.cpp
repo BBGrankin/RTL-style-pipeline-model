@@ -11,8 +11,8 @@ struct ExternalComparisonRow{
     std::size_t cycle;
     int expected_valid;
     int expected_y;
-    int real_valid;
-    int real_y;
+    int actual_valid;
+    int actual_y;
 };
 
 void print_both_models(const std::vector<OutputSample> &comb, 
@@ -155,8 +155,8 @@ int output_comparison(const std::vector<OutputSample>& in_file,
         ExternalComparisonRow row;
         row.expected_valid = in_file[i].valid;
         row.expected_y = in_file[i].y;
-        row.real_valid = out_file[i].valid;
-        row.real_y = out_file[i].y;
+        row.actual_valid = out_file[i].valid;
+        row.actual_y = out_file[i].y;
         row.cycle = i;
         row.result = "OK";
         if (in_file[i].y != out_file[i].y || 
@@ -184,8 +184,8 @@ void print_input_output_table(const std::vector<ExternalComparisonRow>& rows){
         std::cout << std::format("{:^{}}", cycle, width_for_column) << '|'
         << std::format("{:^{}}", rows[i].expected_valid, width_for_column) << '|'
         << std::format("{:^{}}", rows[i].expected_y, width_for_column) << '|'
-        << std::format("{:^{}}", rows[i].real_valid, width_for_column) << '|'
-        << std::format("{:^{}}", rows[i].real_y, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].actual_valid, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].actual_y, width_for_column) << '|'
         << std::format("{:^{}}", rows[i].result, width_for_column) << '|'
         << '\n' << table_sep;
     }
@@ -230,12 +230,12 @@ void comparison_of_input_output_models(const std::string& input_file,
         std::cout << "\nCheck: FAILED\n\n";
         for (std::size_t i {}; i < rows.size(); ++i){
             if (rows[i].result == "FAIL"){
-                std::cout << "Error on cycle - " <<
+                std::cout << "Missmatch at cycle - " <<
                 std::to_string(rows[i].cycle) << "\tExpected valid - "
                 << rows[i].expected_valid << "\tReal valid - "
-                << rows[i].real_valid << "\t\tExpected y - "
+                << rows[i].actual_valid << "\t\tExpected y - "
                 << rows[i].expected_y << "\t\tReal y - "
-                << rows[i].real_y << "\n\n";
+                << rows[i].actual_y << "\n\n";
             }
         }
     }

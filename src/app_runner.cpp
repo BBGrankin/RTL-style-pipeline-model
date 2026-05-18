@@ -34,7 +34,7 @@ void run_comparison(int argc, char** argv){
             latency = (std::stoi(argv[3]));
         }
         catch(const std::exception&) {
-            throw std::invalid_argument("\nWrong third parameter\n");
+            throw std::invalid_argument("\nWrong latency parameter\n");
         }
         comparison_of_input_output_models(argv[1], argv[2], latency);
     }

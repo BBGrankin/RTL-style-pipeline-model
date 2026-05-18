@@ -2,7 +2,7 @@
 
 Учебный C++ проект для моделирования RTL-style pipeline-поведения и проверки результатов с учётом pipeline latency.
 
-Проект имитирует базовую verification-задачу: есть комбинационная модель без задержки и pipeline-модели с задержкой. Программа читает входной trace из файла, валидирует данные, прогоняет их через модели, сравнивает expected/actual outputs с учётом `latency`, `valid`, `reset` и выводит mismatch diagnostics при расхождении.
+Проект имитирует базовую verification-задачу: есть входной trace, reference-модели на C++, pipeline output и внешний actual output, который можно сравнивать с ожидаемым результатом. Основная цель проекта — понять, как в cycle-based моделях работают `valid`, `reset`, pipeline latency, flush-такты и mismatch diagnostics.
 
 ---
 
@@ -20,19 +20,13 @@ y = (a + b) * c
 - `PipelinedModel` — pipeline-модель с задержкой `latency = 1`;
 - `TwoStagePipelineModel` — двухстадийная pipeline-модель с задержкой `latency = 2`.
 
-Для `latency = 1` сравнение выполняется так:
+Для internal comparison используется идея:
 
 ```text
-comb_outputs[i] сравнивается с pipe_outputs[i + 1]
+comb_outputs[i] сравнивается с pipe_outputs[i + latency]
 ```
 
-Для `latency = 2`:
-
-```text
-comb_outputs[i] сравнивается с pipe_outputs[i + 2]
-```
-
-Общий принцип:
+То есть:
 
 ```text
 input на cycle N -> output pipeline на cycle N + latency
@@ -66,21 +60,46 @@ y = 0
 
 ---
 
-## Что делает программа
+## Что умеет программа
 
-Программа:
+Программа поддерживает два основных режима проверки.
 
-1. читает входной trace из файла;
-2. валидирует формат входных данных;
-3. выбирает режим проверки по latency;
-4. прогоняет данные через `CombinationModel`;
-5. прогоняет данные через выбранную pipeline-модель;
-6. добавляет нужное количество flush-тактов;
-7. печатает таблицу по всем cycle;
-8. сравнивает выходы моделей с учётом latency;
-9. учитывает `reset` на пути от input-cycle до output-cycle;
-10. выводит `Check: OK` или `Check: FAILED`;
-11. при ошибке выводит mismatch report.
+### 1. Internal model comparison
+
+В этом режиме программа:
+
+1. читает input trace;
+2. прогоняет его через `CombinationModel`;
+3. прогоняет его через выбранную pipeline-модель;
+4. добавляет нужное количество flush-тактов;
+5. сравнивает `comb[i]` с `pipe[i + latency]`;
+6. учитывает `reset` на пути от input-cycle до output-cycle;
+7. выводит таблицу и mismatch diagnostics.
+
+### 2. External actual-output comparison
+
+В этом режиме программа:
+
+1. читает input trace;
+2. строит expected pipeline output через C++ reference pipeline model;
+3. читает внешний output-файл;
+4. сравнивает `expected[i]` с `actual[i]` по каждому cycle;
+5. проверяет размер expected/actual output;
+6. выводит таблицу `expected/actual` и список mismatch'ей.
+
+Это ближе к реальному verification flow:
+
+```text
+input trace
+    -> C++ reference model
+    -> expected output
+
+actual_output.txt
+    -> external output / RTL simulation output
+
+checker
+    -> expected vs actual
+```
 
 ---
 
@@ -92,7 +111,7 @@ y = 0
 reset valid a b c
 ```
 
-Пример корректного файла:
+Пример:
 
 ```text
 1 0 0 0 0
@@ -101,7 +120,7 @@ reset valid a b c
 0 0 9 9 9
 0 1 3 4 5
 1 0 0 0 0
-0 1 10 2 3
+0 1 9 2 3
 0 0 0 0 0
 ```
 
@@ -109,9 +128,35 @@ reset valid a b c
 
 ---
 
-## Валидация input trace
+## Формат actual output
 
-`trace_reader` проверяет:
+Файл внешнего output содержит по одному output-cycle на строку:
+
+```text
+valid y
+```
+
+Пример:
+
+```text
+0 0
+0 0
+1 20
+1 12
+0 0
+0 0
+0 0
+1 36
+0 0
+```
+
+---
+
+## Валидация файлов
+
+Модуль `file_reader` проверяет input trace и actual output.
+
+Для input trace проверяется:
 
 - файл должен открываться;
 - строка должна содержать ровно 5 параметров;
@@ -122,6 +167,14 @@ reset valid a b c
 - `valid` должен быть равен `0` или `1`;
 - файл не должен быть пустым.
 
+Для actual output проверяется:
+
+- файл должен открываться;
+- строка должна содержать ровно 2 параметра;
+- оба параметра должны быть корректными целыми числами;
+- `valid` должен быть равен `0` или `1`;
+- файл не должен быть пустым.
+
 Примеры ошибок:
 
 ```text
@@ -129,7 +182,9 @@ Wrong number of parameters in line N
 Not a number in line N on position K
 Could not convert string to int on line N on position K
 Wrong valid / reset argument in line N
-File is empty
+Wrong valid argument in output file on line N
+Input file is empty
+Output file is empty
 Could not read file
 ```
 
@@ -137,7 +192,9 @@ Could not read file
 
 ## Mismatch diagnostics
 
-Если модели расходятся, программа выводит отчёт об ошибке:
+### Internal checker
+
+Internal checker выводит mismatch report с информацией:
 
 ```text
 Check: FAILED
@@ -152,21 +209,29 @@ Reset occurred - true/false
 Reason: ...
 ```
 
-Отчёт помогает понять:
-
-- на каком input-cycle возникло расхождение;
-- на каком pipe-cycle ожидался результат;
-- какой результат ожидался;
-- какой результат был получен;
-- повлиял ли `reset` на путь прохождения данных по pipeline;
-- какая latency использовалась при сравнении.
-
-Если reset произошёл на пути от input-cycle до output-cycle, ожидаемый pipeline output становится невалидным:
+Если reset произошёл на пути от input-cycle до output-cycle, expected output становится невалидным:
 
 ```text
 expected valid = 0
 expected y = 0
 ```
+
+### External checker
+
+External checker выводит таблицу:
+
+```text
+cycle | expected valid | expected y | actual valid | actual y | result
+```
+
+Где `result` равен:
+
+```text
+OK
+FAIL
+```
+
+При ошибках дополнительно выводятся cycle, expected values и actual values.
 
 ---
 
@@ -178,16 +243,17 @@ RTL-style-pipeline-model/
 │   ├── app_runner.h
 │   ├── checker.h
 │   ├── errors.h
+│   ├── file_reader.h
 │   ├── formatting.h
 │   ├── models.h
-│   ├── samples.h
-│   └── trace_reader.h
+│   └── samples.h
 ├── src/
 │   ├── app_runner.cpp
 │   ├── checker.cpp
 │   ├── errors.cpp
-│   ├── models.cpp
-│   └── trace_reader.cpp
+│   ├── file_reader.cpp
+│   ├── formatting.cpp
+│   └── models.cpp
 ├── tests/
 │   ├── valid_trace.txt
 │   ├── latency_2.txt
@@ -198,6 +264,7 @@ RTL-style-pipeline-model/
 │   ├── not_a_number.txt
 │   └── empty.txt
 ├── input.txt
+├── actual_output.txt
 ├── main.cpp
 ├── Makefile
 ├── README.md
@@ -243,7 +310,7 @@ FILE=input.txt
 LATENCY=1
 ```
 
-### Запуск с произвольным trace-файлом и latency
+### Запуск internal comparison с произвольным trace-файлом
 
 ```bash
 make run FILE=tests/valid_trace.txt LATENCY=1
@@ -253,7 +320,7 @@ make run FILE=tests/valid_trace.txt LATENCY=1
 make run FILE=tests/latency_2.txt LATENCY=2
 ```
 
-Также можно запускать программу напрямую:
+Или напрямую:
 
 ```bash
 ./app tests/valid_trace.txt 1
@@ -263,15 +330,45 @@ make run FILE=tests/latency_2.txt LATENCY=2
 ./app tests/latency_2.txt 2
 ```
 
-Если файл не передан, используется `input.txt`.
+### Запуск external actual-output comparison
+
+Формат прямого запуска:
+
+```bash
+./app input_trace.txt actual_output.txt latency
+```
+
+Пример:
+
+```bash
+./app tests/valid_trace.txt actual_output.txt 1
+```
+
+Для `latency = 2`:
+
+```bash
+./app tests/latency_2.txt actual_output.txt 2
+```
 
 ---
 
-## Тестовые сценарии
+## Makefile targets
 
-В проекте есть набор входных trace-файлов в папке `tests/`.
+### Основная сборка
 
-### Основной корректный тест для latency = 1
+```bash
+make
+```
+
+### Запуск с параметрами по умолчанию
+
+```bash
+make run
+```
+
+### Internal tests
+
+Основной корректный тест для `latency = 1`:
 
 ```bash
 make test
@@ -283,71 +380,49 @@ make test
 make test_valid
 ```
 
-Ожидаемый результат:
-
-```text
-Check: OK
-```
-
-### Корректный тест для latency = 2
+Корректный тест для `latency = 2`:
 
 ```bash
 make test_latency_2
 ```
 
-Ожидаемый результат:
+### Bad input tests
 
-```text
-Check: OK
-```
-
-### Проверка неправильного reset
+Проверка неправильного reset:
 
 ```bash
 make test_bad_reset
 ```
 
-Ожидаемый результат: ошибка, так как `reset` должен быть равен `0` или `1`.
-
-### Проверка неправильного valid
+Проверка неправильного valid:
 
 ```bash
 make test_bad_valid
 ```
 
-Ожидаемый результат: ошибка, так как `valid` должен быть равен `0` или `1`.
-
-### Проверка короткой строки
+Проверка короткой строки:
 
 ```bash
 make test_bad_short
 ```
 
-Ожидаемый результат: ошибка формата строки, так как параметров меньше пяти.
-
-### Проверка длинной строки
+Проверка длинной строки:
 
 ```bash
 make test_bad_long
 ```
 
-Ожидаемый результат: ошибка формата строки, так как параметров больше пяти.
-
-### Проверка нечислового значения
+Проверка нечислового значения:
 
 ```bash
 make test_nan
 ```
 
-Ожидаемый результат: ошибка, так как один из параметров не является числом.
-
-### Проверка пустого файла
+Проверка пустого файла:
 
 ```bash
 make test_empty
 ```
-
-Ожидаемый результат: ошибка, так как файл не содержит входных samples.
 
 ### Запуск всех тестовых сценариев
 
@@ -355,9 +430,7 @@ make test_empty
 make test_all
 ```
 
----
-
-## Очистка
+### Очистка
 
 ```bash
 make clean
@@ -407,6 +480,7 @@ app
 - модели нельзя всегда сравнивать на одном и том же cycle;
 - latency должна учитываться при сравнении expected/actual;
 - reset должен учитываться на пути от input-cycle до output-cycle;
+- внешний actual output должен сравниваться с уже выровненным expected pipeline output;
 - при проверке важно выводить не только `FAILED`, но и подробную диагностику ошибки.
 
 ---
@@ -421,10 +495,12 @@ app
 - обработка `valid`;
 - обработка `reset`;
 - flush-такты в зависимости от latency;
-- сравнение моделей с учётом latency;
+- internal comparison с учётом latency;
 - reset-aware expected output;
 - mismatch diagnostics;
 - чтение input trace из файла;
+- чтение external actual output из файла;
+- external expected-vs-actual checker;
 - строгая валидация входных данных;
 - выбор latency через аргументы командной строки;
 - набор тестовых trace-файлов;
@@ -435,7 +511,7 @@ app
 Планируемые улучшения:
 
 - автоматическая проверка ожидаемых сообщений об ошибках и exit codes;
-- поддержка комментариев в input trace;
+- поддержка комментариев в input trace и actual output;
 - обобщение pipeline-модели для произвольной latency;
-- добавление внешнего `actual_output.txt` и сравнение reference output с external output;
-- дополнительные сценарии для retiming.
+- дополнительные сценарии для retiming;
+- возможное добавление output-файлов для отдельных latency/test cases.
