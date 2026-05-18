@@ -34,4 +34,5 @@ class ErrorsLog{
         void print_all() const;
 
         void print_first() const;
+
 };

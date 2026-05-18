@@ -36,7 +36,8 @@ OUTPUT_FILE ?= actual_output.txt
 		clean\
 		run\
 		test_default\
-		test_latency_2
+		test_latency_2\
+		test_input_output
 
 all: $(TARGET)
 
@@ -88,6 +89,7 @@ test_all: $(TARGET)
 	./$(TARGET) $(LONG) 1 
 	./$(TARGET) $(NAN) 1 
 	./$(TARGET) $(EMPTY) 1 
+	./$(TARGET) $(VALID) $(OUTPUT) 1
 
 clean:
 	rm -f ./$(TARGET)

@@ -33,15 +33,10 @@ void run_comparison(int argc, char** argv){
         try {
             latency = (std::stoi(argv[3]));
         }
-        catch(const std::exception& e) {
+        catch(const std::exception&) {
             throw std::invalid_argument("\nWrong third parameter\n");
         }
-        try {
-            comparison_of_input_output_models(argv[1], argv[2], latency);
-        }
-        catch(const std::exception& e) {
-            std::cerr << e.what() << '\n';
-        }
+        comparison_of_input_output_models(argv[1], argv[2], latency);
     }
     else {
         throw std::invalid_argument("\nWrong number of files\n");

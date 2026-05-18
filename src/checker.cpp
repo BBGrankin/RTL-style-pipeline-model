@@ -6,11 +6,20 @@
 #include <iomanip>
 #include "file_reader.h"
 
+struct ExternalComparisonRow{
+    std::string result;
+    std::size_t cycle;
+    int expected_valid;
+    int expected_y;
+    int real_valid;
+    int real_y;
+};
+
 void print_both_models(const std::vector<OutputSample> &comb, 
                        const std::vector<OutputSample> &pipe, 
                        const std::vector<InputSample> &sample,
                        std::size_t latency){
-    std::cout << '\n' << line() << std::format("{:^{}}", "cycle", width) << '|'
+    std::cout << '\n' << line << std::format("{:^{}}", "cycle", width) << '|'
     << std::format("{:^{}}", "reset", width) << '|'
     << std::format("{:^{}}", "valid", width) << '|'
     << std::format("{:^{}}", 'a', width) << '|'
@@ -20,7 +29,7 @@ void print_both_models(const std::vector<OutputSample> &comb,
     << std::format("{:^{}}", "comb_y", width) << '|'
     << std::format("{:^{}}", "pipe_valid", width) << '|'
     << std::format("{:^{}}", "pipe_y", width) << '|'
-    << '\n' << line();
+    << '\n' << line;
     for (std::size_t i {}; i < comb.size(); ++i){
         std::string cycle {"cycle "};
         cycle += std::to_string(i);
@@ -34,7 +43,7 @@ void print_both_models(const std::vector<OutputSample> &comb,
         << std::format("{:^{}}", comb[i].y, width) << '|'
         << std::format("{:^{}}", pipe[i].valid, width) << '|'
         << std::format("{:^{}}", pipe[i].y, width) << '|'
-        << '\n' << line();
+        << '\n' << line;
     }
     for (std::size_t i {latency}; i > 0; --i){
         std::string cycle {"cycle "};
@@ -49,7 +58,7 @@ void print_both_models(const std::vector<OutputSample> &comb,
         << std::format("{:^{}}", 0, width) << '|'
         << std::format("{:^{}}", pipe[pipe.size() - i].valid, width) << '|'
         << std::format("{:^{}}", pipe[pipe.size() - i].y, width) << '|'
-        << '\n' << line();
+        << '\n' << line;
     }
 }
 
@@ -136,30 +145,76 @@ void model_comparison_latency_2(const std::vector<InputSample> &sample){
     }
 }
 
+int output_comparison(const std::vector<OutputSample>& in_file,
+                       const std::vector<OutputSample>& out_file,
+                       std::vector<ExternalComparisonRow>& rows){
+    int count {};
+    if (in_file.size() != out_file.size())
+        throw std::invalid_argument("\nWrong sizes of input and output files\n");
+    for (std::size_t i {}; i < in_file.size(); ++i){
+        ExternalComparisonRow row;
+        row.expected_valid = in_file[i].valid;
+        row.expected_y = in_file[i].y;
+        row.real_valid = out_file[i].valid;
+        row.real_y = out_file[i].y;
+        row.cycle = i;
+        row.result = "OK";
+        if (in_file[i].y != out_file[i].y || 
+            in_file[i].valid != out_file[i].valid){
+            row.result = "FAIL";
+            ++count;
+        } 
+        rows.push_back(row);
+    }
+    return count;
+}
+
+void print_input_output_table(const std::vector<ExternalComparisonRow>& rows){
+    std::cout << '\n' << table_sep 
+    << std::format("{:^{}}", "cycle", width_for_column) << '|'
+    << std::format("{:^{}}", "expected valid", width_for_column) << '|'
+    << std::format("{:^{}}", "expected y", width_for_column) << '|'
+    << std::format("{:^{}}", "actual valid", width_for_column) << '|'
+    << std::format("{:^{}}", "actual y", width_for_column) << '|'
+    << std::format("{:^{}}", "result correct", width_for_column) << '|'
+    << '\n' << table_sep;
+    for (std::size_t i {}; i < rows.size(); ++i){
+        std::string cycle {"cycle "};
+        cycle += std::to_string(i);
+        std::cout << std::format("{:^{}}", cycle, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].expected_valid, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].expected_y, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].real_valid, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].real_y, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].result, width_for_column) << '|'
+        << '\n' << table_sep;
+    }
+    std::cout << '\n';
+}
+
 void comparison_of_input_output_models(const std::string& input_file,
                                        const std::string& output_file, int latency){
     std::vector<InputSample> in_file {};
     std::vector<OutputSample> out_file {};
-    try {
-        in_file = read_input_trace(input_file);
-        out_file = read_output_file(output_file);
-    }
-    catch(const std::exception& e) {
-        throw e.what();
-    }
+    in_file = read_input_trace(input_file);
+    out_file = read_output_file(output_file);
     std::vector<OutputSample> pipes{};
-    ErrorsLog errors;
     if (latency == 1){
         PipelinedModel pipe{};
         for (std::size_t i {}; i < in_file.size(); ++i){
-            pipes.push_back(pipe.tick(in_file[i].reset, in_file[i].valid, in_file[i].a, in_file[i].b, in_file[i].c));
+            pipes.push_back(pipe.tick(in_file[i].reset, in_file[i].valid, 
+                                      in_file[i].a, in_file[i].b, in_file[i].c));
         }
         pipes.push_back(pipe.tick(0, 0, 0, 0, 0));
     }
     else if (latency == 2){
         TwoStagePipelineModel pipe{};
         for (std::size_t i {}; i < in_file.size(); ++i){
-            pipes.push_back(pipe.tick(in_file[i].reset, in_file[i].valid, in_file[i].a, in_file[i].b, in_file[i].c));
+            pipes.push_back(pipe.tick(in_file[i].reset, 
+                                      in_file[i].valid, 
+                                      in_file[i].a, 
+                                      in_file[i].b, 
+                                      in_file[i].c));
         }
         pipes.push_back(pipe.tick(0, 0, 0, 0, 0));
         pipes.push_back(pipe.tick(0, 0, 0, 0, 0));
@@ -167,13 +222,21 @@ void comparison_of_input_output_models(const std::string& input_file,
     else{
         throw std::invalid_argument("\nWrong latency parameter\n");
     }
-    errors.setLatency(0);
-    error_finding(pipes, out_file, in_file, errors);
-    print_both_models(pipes, out_file, in_file, 0);
-    if (errors.size() == 0) std::cout << "\nCheck: OK\n\n";
+    std::vector<ExternalComparisonRow> rows {};
+    int count {output_comparison(pipes, out_file, rows)};
+    print_input_output_table(rows);
+    if (count == 0) std::cout << "\nCheck: OK\n\n";
     else{
         std::cout << "\nCheck: FAILED\n\n";
-        if (errors.size() > 5) errors.print_first();
-        else errors.print_all();
+        for (std::size_t i {}; i < rows.size(); ++i){
+            if (rows[i].result == "FAIL"){
+                std::cout << "Error on cycle - " <<
+                std::to_string(rows[i].cycle) << "\tExpected valid - "
+                << rows[i].expected_valid << "\tReal valid - "
+                << rows[i].real_valid << "\t\tExpected y - "
+                << rows[i].expected_y << "\t\tReal y - "
+                << rows[i].real_y << "\n\n";
+            }
+        }
     }
 }
