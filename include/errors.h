@@ -23,6 +23,10 @@ class ErrorsLog{
             this->latency = latency;
         }
 
+        std::size_t getLatency() const{
+            return latency;
+        }
+
         std::size_t size() const;
 
         void push_back(const Error &error);

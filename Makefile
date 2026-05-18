@@ -3,10 +3,9 @@ TARGET = app
 SOURCES = main.cpp src/checker.cpp\
 				   src/errors.cpp\
 				   src/models.cpp\
-				   src/trace_reader.cpp\
+				   src/file_reader.cpp\
 				   src/app_runner.cpp\
 				   src/formatting.cpp\
-				   src/output_reader.cpp
 
 CXXFLAGS = -std=c++20 -Wall -Wextra -Iinclude
 
@@ -55,6 +54,9 @@ test: $(TARGET)
 
 test_valid: $(TARGET)
 	./$(TARGET) $(VALID) 1 
+
+test_input_output: $(TARGET)
+	./$(TARGET) $(VALID) $(OUTPUT) 1
 
 test_bad_long: $(TARGET)
 	./$(TARGET) $(LONG) 1

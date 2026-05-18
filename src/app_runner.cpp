@@ -1,8 +1,7 @@
 #include "app_runner.h"
-#include "trace_reader.h"
+#include "file_reader.h"
 #include "checker.h"
 #include <string>
-#include "output_reader.h"
 #include <iostream>
 
 void run_comparison(int argc, char** argv){
@@ -30,7 +29,19 @@ void run_comparison(int argc, char** argv){
                                             "in range from 1 to 2\n");  
     }
     else if (argc == 4){
-        std::cout << "\nNot working currently\n\n";
+        int latency {};
+        try {
+            latency = (std::stoi(argv[3]));
+        }
+        catch(const std::exception& e) {
+            throw std::invalid_argument("\nWrong third parameter\n");
+        }
+        try {
+            comparison_of_input_output_models(argv[1], argv[2], latency);
+        }
+        catch(const std::exception& e) {
+            std::cerr << e.what() << '\n';
+        }
     }
     else {
         throw std::invalid_argument("\nWrong number of files\n");
