@@ -18,6 +18,13 @@ NAN = tests/not_a_number.txt
 VALID = tests/valid_trace.txt
 LATENCY_2 = tests/latency_2.txt
 OUTPUT = actual_output.txt
+RESET_I_PLUS_1 = tests/latency2_reset_i_plus_1.txt
+RESET_I_PLUS_2 = tests/latency2_reset_i_plus_2.txt
+NORESET = tests/latency2_no_reset_path.txt
+ACTUAL_RESET_I_PLUS_1 = tests/actual_latency2_reset_i_plus_1.txt
+ACTUAL_RESET_I_PLUS_2 = tests/actual_latency2_reset_i_plus_2.txt
+ACTUAL_NORESET = tests/actual_latency2_no_reset_path.txt
+FAILED_NORESET = tests/actual_latency2_no_reset_path_bad.txt
 
 INPUT_FILE ?= input.txt
 LATENCY ?= 1
@@ -37,7 +44,14 @@ OUTPUT_FILE ?= actual_output.txt
 		run\
 		test_default\
 		test_latency_2\
-		test_input_output
+		test_input_output\
+		test_latency2_reset_i_plus_1\
+		test_latency2_reset_i_plus_2\
+		test_latency2_no_reset_path\
+		test_external_latency2_reset_i_plus_1\
+		test_external_latency2_reset_i_plus_2\
+		test_external_latency2_no_reset_path\
+		test_external_latency2_bad_actual
 
 all: $(TARGET)
 
@@ -80,6 +94,27 @@ test_nan: $(TARGET)
 test_latency_2: $(TARGET)
 	./$(TARGET) $(LATENCY_2) 2 
 
+test_latency2_reset_i_plus_1: $(TARGET)
+	./$(TARGET) $(RESET_I_PLUS_1) 2 
+
+test_latency2_reset_i_plus_2: $(TARGET)
+	./$(TARGET) $(RESET_I_PLUS_2) 2 
+
+test_latency2_no_reset_path: $(TARGET)
+	./$(TARGET) $(NORESET) 2 
+
+test_external_latency2_reset_i_plus_1: $(TARGET)
+	./$(TARGET) $(RESET_I_PLUS_1) $(ACTUAL_RESET_I_PLUS_1) 2 
+
+test_external_latency2_reset_i_plus_2: $(TARGET)
+	./$(TARGET) $(RESET_I_PLUS_2) $(ACTUAL_RESET_I_PLUS_2) 2 
+
+test_external_latency2_no_reset_path: $(TARGET)
+	./$(TARGET) $(NORESET) $(ACTUAL_NORESET) 2 
+
+test_external_latency2_bad_actual: $(TARGET)
+	./$(TARGET) $(NORESET) $(FAILED_NORESET) 2 
+
 test_all: $(TARGET)
 	./$(TARGET) $(VALID) 1 
 	./$(TARGET) $(LATENCY_2) 2
@@ -90,6 +125,13 @@ test_all: $(TARGET)
 	./$(TARGET) $(NAN) 1 
 	./$(TARGET) $(EMPTY) 1 
 	./$(TARGET) $(VALID) $(OUTPUT) 1
+	./$(TARGET) $(NORESET) 2 
+	./$(TARGET) $(RESET_I_PLUS_2) 2 
+	./$(TARGET) $(RESET_I_PLUS_1) 2 
+	./$(TARGET) $(RESET_I_PLUS_1) $(ACTUAL_RESET_I_PLUS_1) 2 
+	./$(TARGET) $(RESET_I_PLUS_2) $(ACTUAL_RESET_I_PLUS_2) 2 
+	./$(TARGET) $(NORESET) $(ACTUAL_NORESET) 2 
+	./$(TARGET) $(NORESET) $(FAILED_NORESET) 2 
 
 clean:
 	rm -f ./$(TARGET)
