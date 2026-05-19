@@ -231,9 +231,9 @@ void comparison_of_input_output_models(const std::string& input_file,
             if (rows[i].result == "FAIL"){
                 std::cout << "Missmatch at cycle - " <<
                 std::to_string(rows[i].cycle) << "\tExpected valid - "
-                << rows[i].expected_valid << "\tReal valid - "
+                << rows[i].expected_valid << "\tActual valid - "
                 << rows[i].actual_valid << "\t\tExpected y - "
-                << rows[i].expected_y << "\t\tReal y - "
+                << rows[i].expected_y << "\t\tActual y - "
                 << rows[i].actual_y << "\n\n";
             }
         }
@@ -287,11 +287,11 @@ void comparison_of_two_latency_models(const std::vector<InputSample> &sample){
         std::cout << "\nCheck: FAILED\n\n";
         for (std::size_t i {}; i < rows.size(); ++i){
             if (rows[i].result == "FAIL"){
-                std::cout << "Missmatch at cycle - " <<
+                std::cout << "Mismatch at cycle - " <<
                 std::to_string(rows[i].cycle) << "\tExpected valid - "
-                << rows[i].expected_valid << "\tReal valid - "
+                << rows[i].expected_valid << "\tActual valid - "
                 << rows[i].actual_valid << "\t\tExpected y - "
-                << rows[i].expected_y << "\t\tReal y - "
+                << rows[i].expected_y << "\t\tActual y - "
                 << rows[i].actual_y << "\n\n";
             }
         }

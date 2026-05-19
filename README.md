@@ -1,8 +1,8 @@
 # RTL-style Pipeline Model
 
-Учебный C++ проект для моделирования RTL-style pipeline-поведения и проверки результатов с учётом pipeline latency.
+Учебный C++ проект для моделирования RTL-style pipeline-поведения, проверки pipeline latency и демонстрации базовой идеи retiming.
 
-Проект имитирует базовую verification-задачу: есть входной trace, reference-модели на C++, pipeline output и внешний actual output, который можно сравнивать с ожидаемым результатом. Основная цель проекта — понять, как в cycle-based моделях работают `valid`, `reset`, pipeline latency, flush-такты и mismatch diagnostics.
+Проект имитирует маленький verification flow: есть входной trace, C++ reference-модели, pipeline output, внешний actual output и checker, который сравнивает expected/actual значения по тактам.
 
 ---
 
@@ -18,7 +18,8 @@ y = (a + b) * c
 
 - `CombinationModel` — комбинационная модель без задержки;
 - `PipelinedModel` — pipeline-модель с задержкой `latency = 1`;
-- `TwoStagePipelineModel` — двухстадийная pipeline-модель с задержкой `latency = 2`.
+- `TwoStagePipelineModel` — двухстадийная pipeline-модель с задержкой `latency = 2`;
+- `RetimedTwoStagePipelineModel` — альтернативная двухстадийная модель с другим расположением регистров, но той же observable latency.
 
 Для internal comparison используется идея:
 
@@ -30,6 +31,12 @@ comb_outputs[i] сравнивается с pipe_outputs[i + latency]
 
 ```text
 input на cycle N -> output pipeline на cycle N + latency
+```
+
+Для external actual-output comparison и retimed comparison сравнение идёт уже без сдвига:
+
+```text
+expected[i] сравнивается с actual[i]
 ```
 
 ---
@@ -62,7 +69,7 @@ y = 0
 
 ## Что умеет программа
 
-Программа поддерживает два основных режима проверки.
+Программа поддерживает три основных режима проверки.
 
 ### 1. Internal model comparison
 
@@ -100,6 +107,23 @@ actual_output.txt
 checker
     -> expected vs actual
 ```
+
+### 3. Retimed model comparison
+
+В этом режиме программа сравнивает две latency=2 pipeline-модели:
+
+```text
+TwoStagePipelineModel
+RetimedTwoStagePipelineModel
+```
+
+Смысл проверки:
+
+```text
+original_pipeline_output[i] == retimed_pipeline_output[i]
+```
+
+То есть две модели имеют разное внутреннее расположение регистров, но должны давать одинаковое внешнее поведение по cycle.
 
 ---
 
@@ -233,6 +257,16 @@ FAIL
 
 При ошибках дополнительно выводятся cycle, expected values и actual values.
 
+### Retimed checker
+
+Retimed checker выводит таблицу:
+
+```text
+cycle | original valid | original y | retimed valid | retimed y | result
+```
+
+Если `TwoStagePipelineModel` и `RetimedTwoStagePipelineModel` расходятся, checker выводит mismatch по соответствующему cycle.
+
 ---
 
 ## Структура проекта
@@ -257,6 +291,13 @@ RTL-style-pipeline-model/
 ├── tests/
 │   ├── valid_trace.txt
 │   ├── latency_2.txt
+│   ├── latency2_reset_i_plus_1.txt
+│   ├── latency2_reset_i_plus_2.txt
+│   ├── latency2_no_reset_path.txt
+│   ├── actual_latency2_reset_i_plus_1.txt
+│   ├── actual_latency2_reset_i_plus_2.txt
+│   ├── actual_latency2_no_reset_path.txt
+│   ├── actual_latency2_no_reset_path_bad.txt
 │   ├── bad_reset.txt
 │   ├── bad_valid.txt
 │   ├── bad_format_short.txt
@@ -297,30 +338,33 @@ app
 
 ## Запуск
 
-### Запуск с файлом по умолчанию
+### Запуск с параметрами по умолчанию
 
 ```bash
 make run
 ```
 
-По умолчанию используется:
+По умолчанию используются:
 
 ```text
-FILE=input.txt
+INPUT_FILE=input.txt
+OUTPUT_FILE=actual_output.txt
 LATENCY=1
 ```
 
-### Запуск internal comparison с произвольным trace-файлом
+### Internal comparison
+
+Запуск через Makefile:
 
 ```bash
-make run FILE=tests/valid_trace.txt LATENCY=1
+make run INPUT_FILE=tests/valid_trace.txt LATENCY=1
 ```
 
 ```bash
-make run FILE=tests/latency_2.txt LATENCY=2
+make run INPUT_FILE=tests/latency_2.txt LATENCY=2
 ```
 
-Или напрямую:
+Прямой запуск:
 
 ```bash
 ./app tests/valid_trace.txt 1
@@ -330,7 +374,7 @@ make run FILE=tests/latency_2.txt LATENCY=2
 ./app tests/latency_2.txt 2
 ```
 
-### Запуск external actual-output comparison
+### External actual-output comparison
 
 Формат прямого запуска:
 
@@ -347,7 +391,7 @@ make run FILE=tests/latency_2.txt LATENCY=2
 Для `latency = 2`:
 
 ```bash
-./app tests/latency_2.txt actual_output.txt 2
+./app tests/latency_2.txt tests/actual_latency2_no_reset_path.txt 2
 ```
 
 ---
@@ -386,41 +430,35 @@ make test_valid
 make test_latency_2
 ```
 
-### Bad input tests
+Reset-path сценарии для `latency = 2`:
 
-Проверка неправильного reset:
+```bash
+make test_latency2_reset_i_plus_1
+make test_latency2_reset_i_plus_2
+make test_latency2_no_reset_path
+```
+
+### External actual-output tests
+
+```bash
+make test_input_output
+```
+
+```bash
+make test_external_latency2_reset_i_plus_1
+make test_external_latency2_reset_i_plus_2
+make test_external_latency2_no_reset_path
+make test_external_latency2_bad_actual
+```
+
+### Bad input tests
 
 ```bash
 make test_bad_reset
-```
-
-Проверка неправильного valid:
-
-```bash
 make test_bad_valid
-```
-
-Проверка короткой строки:
-
-```bash
 make test_bad_short
-```
-
-Проверка длинной строки:
-
-```bash
 make test_bad_long
-```
-
-Проверка нечислового значения:
-
-```bash
 make test_nan
-```
-
-Проверка пустого файла:
-
-```bash
 make test_empty
 ```
 
@@ -481,6 +519,7 @@ app
 - latency должна учитываться при сравнении expected/actual;
 - reset должен учитываться на пути от input-cycle до output-cycle;
 - внешний actual output должен сравниваться с уже выровненным expected pipeline output;
+- retiming может менять внутреннее расположение регистров, но observable output должен оставаться эквивалентным;
 - при проверке важно выводить не только `FAILED`, но и подробную диагностику ошибки.
 
 ---
@@ -492,6 +531,7 @@ app
 - комбинационная модель;
 - pipeline-модель с задержкой 1 такт;
 - двухстадийная pipeline-модель с задержкой 2 такта;
+- retimed двухстадийная pipeline-модель с задержкой 2 такта;
 - обработка `valid`;
 - обработка `reset`;
 - flush-такты в зависимости от latency;
@@ -501,6 +541,7 @@ app
 - чтение input trace из файла;
 - чтение external actual output из файла;
 - external expected-vs-actual checker;
+- comparison original-vs-retimed latency=2 models;
 - строгая валидация входных данных;
 - выбор latency через аргументы командной строки;
 - набор тестовых trace-файлов;
@@ -513,5 +554,5 @@ app
 - автоматическая проверка ожидаемых сообщений об ошибках и exit codes;
 - поддержка комментариев в input trace и actual output;
 - обобщение pipeline-модели для произвольной latency;
-- дополнительные сценарии для retiming;
+- более сложные retiming-сценарии с несколькими операциями;
 - возможное добавление output-файлов для отдельных latency/test cases.
