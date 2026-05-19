@@ -89,3 +89,55 @@ OutputSample TwoStagePipelineModel::tick(int reset, int valid,
     }
     return output;
 }
+
+RetimedTwoStagePipelineModel::RetimedTwoStagePipelineModel(int stage1_a, 
+                                                           int stage1_b,
+                                                           int stage1_c, 
+                                                           int stage1_valid,
+                                                           int stage2_valid, 
+                                                           int stage2_y):
+    stage1_a(stage1_a), stage1_b(stage1_b), stage1_c(stage1_c), 
+    stage1_valid(stage1_valid), stage2_valid(stage2_valid), stage2_y(stage2_y)
+{}
+
+OutputSample RetimedTwoStagePipelineModel::tick(int reset, int valid, int a, int b, int c){
+    OutputSample output;
+    if (reset == 1){
+        output.valid = 0;
+        output.y = 0;
+
+        stage1_a = 0;
+        stage1_b = 0;
+        stage1_c = 0;
+        stage1_valid = 0;
+        stage2_valid = 0;
+        stage2_y = 0;
+        return output;
+    }
+
+    output.valid = stage2_valid;
+    output.y = stage2_y;
+
+    if (stage1_valid == 1){
+        stage2_y = (stage1_b + stage1_a) * stage1_c;
+        stage2_valid = stage1_valid;
+    }
+    else{
+        stage2_y = 0;
+        stage2_valid = 0;
+    }
+    
+    if (valid == 1){
+        stage1_a = a;
+        stage1_b = b;
+        stage1_c = c;
+        stage1_valid = valid;
+    }
+    else{
+        stage1_a = 0;
+        stage1_b = 0;
+        stage1_c = 0;
+        stage1_valid = 0;
+    }
+    return output;
+}

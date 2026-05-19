@@ -3,6 +3,7 @@
 #include "checker.h"
 #include <string>
 #include <iostream>
+#include "formatting.h"
 
 void run_comparison(int argc, char** argv){
     if (argc == 1){
@@ -24,6 +25,8 @@ void run_comparison(int argc, char** argv){
         }
         else if (latency == 2){
             model_comparison_latency_2(read_input_trace(argv[1]));
+            std::cout << line << line;
+            comparison_of_two_latency_models(read_input_trace(argv[1]));
         }
         else throw std::invalid_argument("\nThird parameter should be "
                                             "in range from 1 to 2\n");  

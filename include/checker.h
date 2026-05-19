@@ -21,3 +21,5 @@ void model_comparison_latency_2(const std::vector<InputSample> &sample);
 void comparison_of_input_output_models(const std::string& input_file,
                                        const std::string& output_file,
                                        int latency);
+
+void comparison_of_two_latency_models(const std::vector<InputSample> &sample);

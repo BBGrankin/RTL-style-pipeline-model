@@ -189,7 +189,6 @@ void print_input_output_table(const std::vector<ExternalComparisonRow>& rows){
         << std::format("{:^{}}", rows[i].result, width_for_column) << '|'
         << '\n' << table_sep;
     }
-    std::cout << '\n';
 }
 
 void comparison_of_input_output_models(const std::string& input_file,
@@ -225,6 +224,64 @@ void comparison_of_input_output_models(const std::string& input_file,
     std::vector<ExternalComparisonRow> rows {};
     int count {output_comparison(pipes, out_file, rows)};
     print_input_output_table(rows);
+    if (count == 0) std::cout << "\nCheck: OK\n\n";
+    else{
+        std::cout << "\nCheck: FAILED\n\n";
+        for (std::size_t i {}; i < rows.size(); ++i){
+            if (rows[i].result == "FAIL"){
+                std::cout << "Missmatch at cycle - " <<
+                std::to_string(rows[i].cycle) << "\tExpected valid - "
+                << rows[i].expected_valid << "\tReal valid - "
+                << rows[i].actual_valid << "\t\tExpected y - "
+                << rows[i].expected_y << "\t\tReal y - "
+                << rows[i].actual_y << "\n\n";
+            }
+        }
+    }
+}
+
+void print_2_latency_models(const std::vector<ExternalComparisonRow>& rows){
+    std::cout << '\n' << table_sep 
+    << std::format("{:^{}}", "cycle", width_for_column) << '|'
+    << std::format("{:^{}}", "original valid", width_for_column) << '|'
+    << std::format("{:^{}}", "original y", width_for_column) << '|'
+    << std::format("{:^{}}", "retimed valid", width_for_column) << '|'
+    << std::format("{:^{}}", "retimed y", width_for_column) << '|'
+    << std::format("{:^{}}", "result correct", width_for_column) << '|'
+    << '\n' << table_sep;
+    for (std::size_t i {}; i < rows.size(); ++i){
+        std::string cycle {"cycle "};
+        cycle += std::to_string(i);
+        std::cout << std::format("{:^{}}", cycle, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].expected_valid, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].expected_y, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].actual_valid, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].actual_y, width_for_column) << '|'
+        << std::format("{:^{}}", rows[i].result, width_for_column) << '|'
+        << '\n' << table_sep;
+    }
+}
+
+void comparison_of_two_latency_models(const std::vector<InputSample> &sample){
+    TwoStagePipelineModel pipe1;
+    RetimedTwoStagePipelineModel pipe2;
+    std::vector<OutputSample> pipe1_outputs, pipe2_outputs;
+    for (std::size_t i {}; i < sample.size(); ++i){
+        pipe1_outputs.push_back(pipe1.tick(sample[i].reset, sample[i].valid, 
+                                         sample[i].a, sample[i].b, 
+                                         sample[i].c));
+        pipe2_outputs.push_back(pipe2.tick(sample[i].reset, sample[i].valid, 
+                                         sample[i].a, 
+                                         sample[i].b, 
+                                         sample[i].c));
+    }
+    for (int i {}; i < 2; ++i){
+        pipe1_outputs.push_back(pipe1.tick(0, 0, 0, 0, 0));
+        pipe2_outputs.push_back(pipe2.tick(0, 0, 0, 0, 0));
+    }
+    std::vector<ExternalComparisonRow> rows {};
+    int count {output_comparison(pipe1_outputs, pipe2_outputs, rows)};
+    print_2_latency_models(rows);
     if (count == 0) std::cout << "\nCheck: OK\n\n";
     else{
         std::cout << "\nCheck: FAILED\n\n";
