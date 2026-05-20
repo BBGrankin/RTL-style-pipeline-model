@@ -3,6 +3,7 @@
 #include "samples.h"
 #include <vector>
 #include "errors.h"
+#include <string>
 
 void print_both_models(const std::vector<OutputSample> &comb, 
                        const std::vector<OutputSample> &pipe, 
